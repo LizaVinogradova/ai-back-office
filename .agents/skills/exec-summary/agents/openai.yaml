@@ -1,0 +1,3 @@
+display_name: Exec Summary
+short_description: Собирает месячный exec summary из monthly_report.xlsx.
+default_prompt: Собери exec summary за последний месяц с данными из monthly_report.xlsx и сохрани exec-summary.md.
