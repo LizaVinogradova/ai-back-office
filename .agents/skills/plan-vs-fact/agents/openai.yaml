@@ -1,0 +1,4 @@
+interface:
+  display_name: "Plan vs Fact"
+  short_description: "Собирает EBITDA plan-vs-fact workbook по Project ID."
+  default_prompt: "Собери plan-vs-fact.xlsx и plan-vs-fact-summary.md из monthly_workbook.xlsx и expenses_fact_1c_*.xlsx."
