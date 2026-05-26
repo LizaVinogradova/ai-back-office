@@ -1,0 +1,632 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exec Summary — Апрель 2026</title>
+  <style>
+    :root {
+      --ink: #17212b;
+      --muted: #607080;
+      --line: #d9e0e6;
+      --paper: #f6f8f9;
+      --panel: #ffffff;
+      --green: #1f8a70;
+      --red: #b64545;
+      --blue: #245f9f;
+      --gold: #a97820;
+      --slate: #2f4050;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      overflow: hidden;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background: var(--paper);
+    }
+
+    .deck {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      padding: 38px 56px 30px;
+      opacity: 0;
+      transform: translateX(42px);
+      pointer-events: none;
+      transition: opacity 360ms ease, transform 360ms ease;
+      background:
+        linear-gradient(90deg, rgba(255,255,255,.96), rgba(255,255,255,.88)),
+        radial-gradient(circle at 88% 10%, rgba(36,95,159,.11), transparent 30%),
+        var(--paper);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateX(0);
+      pointer-events: auto;
+    }
+
+    header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 32px;
+    }
+
+    .eyebrow {
+      margin: 0 0 12px;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 0;
+      color: var(--blue);
+      text-transform: uppercase;
+    }
+
+    h1, h2 {
+      margin: 0;
+      max-width: 980px;
+      line-height: 1.02;
+      letter-spacing: 0;
+      font-weight: 760;
+    }
+
+    h1 { font-size: 60px; }
+    h2 { font-size: 42px; }
+
+    .period {
+      min-width: 170px;
+      text-align: right;
+      font-size: 22px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .content {
+      align-self: stretch;
+      min-height: 0;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--muted);
+      font-size: 16px;
+      border-top: 1px solid var(--line);
+      padding-top: 12px;
+    }
+
+    .counter { font-weight: 700; color: var(--slate); }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr);
+      gap: 42px;
+      align-items: center;
+      height: 100%;
+    }
+
+    .big-number {
+      font-size: 88px;
+      line-height: .92;
+      font-weight: 800;
+      color: var(--ink);
+      letter-spacing: 0;
+    }
+
+    .subline {
+      margin-top: 18px;
+      font-size: 25px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+      box-shadow: 0 18px 45px rgba(30, 44, 58, .07);
+      min-width: 0;
+    }
+
+    .metric .label {
+      font-size: 20px;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .metric .value {
+      font-size: 36px;
+      line-height: 1;
+      font-weight: 800;
+    }
+
+    .delta {
+      margin-top: 12px;
+      font-size: 19px;
+      font-weight: 700;
+    }
+
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .flat { color: var(--gold); }
+
+    .columns {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      gap: 28px;
+      height: 100%;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 18px 45px rgba(30, 44, 58, .07);
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .panel h3 {
+      margin: 0 0 15px;
+      font-size: 25px;
+      line-height: 1.12;
+    }
+
+    .bar-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .bar-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 94px;
+      gap: 18px;
+      align-items: center;
+      font-size: 17px;
+    }
+
+    .bar-track {
+      grid-column: 1 / -1;
+      height: 12px;
+      background: #e8edf1;
+      border-radius: 999px;
+      overflow: hidden;
+      margin-top: -8px;
+    }
+
+    .bar {
+      height: 100%;
+      background: var(--blue);
+      border-radius: 999px;
+    }
+
+    .bar.expense { background: var(--gold); }
+
+    .amount {
+      text-align: right;
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 20px;
+    }
+
+    .kpi-card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 20px;
+      min-height: 152px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      min-width: 0;
+    }
+
+    .kpi-card strong {
+      display: block;
+      font-size: 20px;
+      line-height: 1.18;
+      margin-bottom: 18px;
+    }
+
+    .planfact {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      font-size: 19px;
+    }
+
+    .planfact span:last-child { font-weight: 800; }
+
+    .trend {
+      margin-top: 16px;
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.25;
+    }
+
+    .project-list {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .project {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 92px;
+      gap: 10px 18px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 15px 17px;
+      min-width: 0;
+    }
+
+    .project-title {
+      font-size: 19px;
+      font-weight: 760;
+      line-height: 1.15;
+    }
+
+    .project-status {
+      font-size: 16px;
+      color: var(--muted);
+      margin-top: 8px;
+    }
+
+    .percent {
+      font-size: 28px;
+      font-weight: 800;
+      text-align: right;
+    }
+
+    .risk {
+      font-size: 17px;
+      line-height: 1.25;
+      color: var(--slate);
+      grid-column: 1 / -1;
+    }
+
+    .events {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px 18px;
+    }
+
+    .event {
+      background: var(--panel);
+      border-left: 6px solid var(--blue);
+      border-radius: 8px;
+      padding: 14px 17px;
+      box-shadow: 0 12px 32px rgba(30, 44, 58, .06);
+    }
+
+    .event .date {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--blue);
+      margin-bottom: 8px;
+    }
+
+    .event .title {
+      font-size: 19px;
+      line-height: 1.18;
+      font-weight: 760;
+      margin-bottom: 8px;
+    }
+
+    .event .impact {
+      font-size: 16px;
+      line-height: 1.28;
+      color: var(--muted);
+    }
+
+    .takeaways {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      height: 100%;
+      align-content: center;
+    }
+
+    .takeaway {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 24px;
+      min-height: 145px;
+    }
+
+    .takeaway .tag {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--blue);
+      margin-bottom: 16px;
+      text-transform: uppercase;
+    }
+
+    .takeaway p {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.18;
+      font-weight: 740;
+    }
+
+    .nav {
+      position: fixed;
+      right: 22px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: grid;
+      gap: 10px;
+      z-index: 5;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: 1px solid #8da0b2;
+      background: transparent;
+      cursor: pointer;
+    }
+
+    .dot.active {
+      background: var(--blue);
+      border-color: var(--blue);
+    }
+
+    @media (max-width: 680px) {
+      .slide { padding: 42px 46px 34px; }
+      h1 { font-size: 54px; }
+      h2 { font-size: 42px; }
+      .big-number { font-size: 82px; }
+      .columns, .hero-grid, .takeaways { grid-template-columns: 1fr; }
+      .cards { grid-template-columns: repeat(2, 1fr); }
+      .events { grid-template-columns: 1fr; }
+      .project { grid-template-columns: 1fr; }
+      .percent { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck">
+    <section class="slide active">
+      <header>
+        <div>
+          <p class="eyebrow">Совет акционеров холдинга</p>
+          <h1>Exec summary за апрель 2026</h1>
+        </div>
+        <div class="period">Финансы, KPI, проекты, события</div>
+      </header>
+      <div class="content hero-grid">
+        <div>
+          <div class="big-number">123.8</div>
+          <div class="subline">млн руб. доходов в апреле<br>+2.6 млн руб. к марту</div>
+        </div>
+        <div class="metric-row" style="grid-template-columns:1fr">
+          <div class="metric">
+            <div class="label">EBITDA</div>
+            <div class="value">23.3 млн</div>
+            <div class="delta down">-0.2 млн к марту</div>
+          </div>
+          <div class="metric">
+            <div class="label">Маржа EBITDA</div>
+            <div class="value">18.8%</div>
+            <div class="delta down">-0.6 п.п. к марту</div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>Источник: exec-summary.md</span><span class="counter">1 / 7</span></div>
+    </section>
+
+    <section class="slide">
+      <header>
+        <div>
+          <p class="eyebrow">Финансы</p>
+          <h2>Доходы выросли до 123.8 млн руб.</h2>
+        </div>
+        <div class="period">Апрель к марту</div>
+      </header>
+      <div class="content">
+        <div class="columns">
+          <div class="panel">
+            <h3>Доходы по направлениям</h3>
+            <div class="bar-list">
+              <div class="bar-item"><span>Городские лектории</span><span class="amount">38.4</span><div class="bar-track"><div class="bar" style="width:100%"></div></div></div>
+              <div class="bar-item"><span>Онлайн-платформа</span><span class="amount">27.1</span><div class="bar-track"><div class="bar" style="width:71%"></div></div></div>
+              <div class="bar-item"><span>Спецпроекты</span><span class="amount">22.9</span><div class="bar-track"><div class="bar" style="width:60%"></div></div></div>
+              <div class="bar-item"><span>Издательство</span><span class="amount">18.7</span><div class="bar-track"><div class="bar" style="width:49%"></div></div></div>
+              <div class="bar-item"><span>B2B</span><span class="amount">16.7</span><div class="bar-track"><div class="bar" style="width:43%"></div></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Динамика к марту</h3>
+            <div class="metric-row" style="grid-template-columns:1fr 1fr">
+              <div class="metric"><div class="label">Спецпроекты</div><div class="value">+3.5</div></div>
+              <div class="metric"><div class="label">Онлайн</div><div class="value">+2.5</div></div>
+              <div class="metric"><div class="label">Издательство</div><div class="value">+0.8</div></div>
+              <div class="metric"><div class="label">Лектории</div><div class="value down">-2.8</div></div>
+              <div class="metric"><div class="label">B2B</div><div class="value down">-1.4</div></div>
+              <div class="metric"><div class="label">Итого</div><div class="value up">+2.6</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>млн руб.</span><span class="counter">2 / 7</span></div>
+    </section>
+
+    <section class="slide">
+      <header>
+        <div>
+          <p class="eyebrow">Расходы и EBITDA</p>
+          <h2>Расходы: 100.5 млн руб.; EBITDA: 23.3 млн руб.</h2>
+        </div>
+        <div class="period">Маржа 18.8%</div>
+      </header>
+      <div class="content">
+        <div class="columns">
+          <div class="panel">
+            <h3>Расходы по статьям</h3>
+            <div class="bar-list">
+              <div class="bar-item"><span>ФОТ</span><span class="amount">41.8</span><div class="bar-track"><div class="bar expense" style="width:100%"></div></div></div>
+              <div class="bar-item"><span>Гонорары</span><span class="amount">18.4</span><div class="bar-track"><div class="bar expense" style="width:44%"></div></div></div>
+              <div class="bar-item"><span>Аренда площадок</span><span class="amount">12.3</span><div class="bar-track"><div class="bar expense" style="width:29%"></div></div></div>
+              <div class="bar-item"><span>Производство контента</span><span class="amount">11.1</span><div class="bar-track"><div class="bar expense" style="width:27%"></div></div></div>
+              <div class="bar-item"><span>Маркетинг</span><span class="amount">9.7</span><div class="bar-track"><div class="bar expense" style="width:23%"></div></div></div>
+              <div class="bar-item"><span>Операции / IT</span><span class="amount">7.2</span><div class="bar-track"><div class="bar expense" style="width:17%"></div></div></div>
+            </div>
+          </div>
+          <div class="panel">
+            <h3>Изменения к марту</h3>
+            <div class="metric-row" style="grid-template-columns:1fr 1fr">
+              <div class="metric"><div class="label">Гонорары</div><div class="value up">+1.7</div></div>
+              <div class="metric"><div class="label">Контент</div><div class="value up">+1.3</div></div>
+              <div class="metric"><div class="label">ФОТ</div><div class="value up">+0.9</div></div>
+              <div class="metric"><div class="label">IT / операции</div><div class="value up">+0.4</div></div>
+              <div class="metric"><div class="label">Аренда</div><div class="value down">-0.8</div></div>
+              <div class="metric"><div class="label">Маркетинг</div><div class="value down">-0.7</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="footer"><span>млн руб.; маржа в процентах</span><span class="counter">3 / 7</span></div>
+    </section>
+
+    <section class="slide">
+      <header>
+        <div>
+          <p class="eyebrow">KPI команд</p>
+          <h2>План / факт апреля и тренд Jan–Apr</h2>
+        </div>
+        <div class="period">6 метрик</div>
+      </header>
+      <div class="content">
+        <div class="cards">
+          <div class="kpi-card"><strong>Новые подписки</strong><div><div class="planfact"><span>План 4 800</span><span>Факт 5 210</span></div><div class="trend up">4720 → 4830 → 4950 → 5210; растёт</div></div></div>
+          <div class="kpi-card"><strong>Проданные билеты</strong><div><div class="planfact"><span>План 18 500</span><span>Факт 16 940</span></div><div class="trend down">16100 → 17220 → 17400 → 16940; просадка</div></div></div>
+          <div class="kpi-card"><strong>B2B контракты</strong><div><div class="planfact"><span>План 6</span><span>Факт 4</span></div><div class="trend flat">3 → 5 → 3 → 4; стабильно</div></div></div>
+          <div class="kpi-card"><strong>NPS подписчиков</strong><div><div class="planfact"><span>План 45</span><span>Факт 48</span></div><div class="trend up">46 → 47 → 47 → 48; растёт</div></div></div>
+          <div class="kpi-card"><strong>Лекции в производстве</strong><div><div class="planfact"><span>План 80</span><span>Факт 86</span></div><div class="trend up">72 → 76 → 81 → 86; растёт</div></div></div>
+          <div class="kpi-card"><strong>Релизы издательства</strong><div><div class="planfact"><span>План 12</span><span>Факт 11</span></div><div class="trend down">11 → 12 → 12 → 11; просадка</div></div></div>
+        </div>
+      </div>
+      <div class="footer"><span>Тренд рассчитан по факту Jan–Apr</span><span class="counter">4 / 7</span></div>
+    </section>
+
+    <section class="slide">
+      <header>
+        <div>
+          <p class="eyebrow">Флагманские проекты</p>
+          <h2>Выполнение, статус и риски</h2>
+        </div>
+        <div class="period">5 проектов</div>
+      </header>
+      <div class="content">
+        <div class="project-list">
+          <div class="project"><div><div class="project-title">Цифровая платформа 2.0</div><div class="project-status">Перерасход 6.7%</div></div><div class="percent">106.7%</div><div class="risk">Средний — доп. инфраструктура под пиковую нагрузку</div></div>
+          <div class="project"><div><div class="project-title">Весенние чтения</div><div class="project-status">Закрывается в мае</div></div><div class="percent">95.2%</div><div class="risk">Низкий — мероприятие завершается</div></div>
+          <div class="project"><div><div class="project-title">Аудиокниги — летний релиз</div><div class="project-status">В срок</div></div><div class="percent">86.2%</div><div class="risk">Низкий</div></div>
+          <div class="project"><div><div class="project-title">Региональная программа — Сибирь</div><div class="project-status">Идёт по графику</div></div><div class="percent">82.9%</div><div class="risk">Средний — погодная зависимость летних программ</div></div>
+          <div class="project"><div><div class="project-title">B2B со Сбером</div><div class="project-status">Отстаём от графика</div></div><div class="percent down">68.9%</div><div class="risk">Высокий — пайплайн под пересмотром после ухода продюсера</div></div>
+        </div>
+      </div>
+      <div class="footer"><span>Факт YTD к плановому бюджету</span><span class="counter">5 / 7</span></div>
+    </section>
+
+    <section class="slide">
+      <header>
+        <div>
+          <p class="eyebrow">События апреля</p>
+          <h2>Факторы, привязанные к показателям</h2>
+        </div>
+        <div class="period">11 событий</div>
+      </header>
+      <div class="content">
+        <div class="events">
+          <div class="event"><div class="date">02.04</div><div class="title">Релиз Платформы 2.0 beta</div><div class="impact">+280 подписок за первую неделю; перерасход проекта 6.7%</div></div>
+          <div class="event"><div class="date">05.04</div><div class="title">Контракт со Сбером</div><div class="impact">+1 к KPI B2B-контрактов; 6 млн руб. на 12 месяцев</div></div>
+          <div class="event"><div class="date">08.04</div><div class="title">Уход продюсера B2B</div><div class="impact">Пайплайн май-июнь под пересмотром; факт B2B 4/6</div></div>
+          <div class="event"><div class="date">10.04</div><div class="title">Фестиваль «Весенние чтения»</div><div class="impact">+22.9 млн руб. в спецпроектах; выполнение 95.2%</div></div>
+          <div class="event"><div class="date">15.04</div><div class="title">Аудиокнига «Долгая память»</div><div class="impact">+12K продаж за две недели; +0.8 млн руб. выручки издательства</div></div>
+          <div class="event"><div class="date">22.04</div><div class="title">Просадка трафика лекториев</div><div class="impact">-560 билетов к плану апреля; реклама в метро переработана</div></div>
+        </div>
+      </div>
+      <div class="footer"><span>На слайде показаны события с прямой числовой привязкой</span><span class="counter">6 / 7</span></div>
+    </section>
+
+    <section class="slide">
+      <header>
+        <div>
+          <p class="eyebrow">Панель для обсуждения</p>
+          <h2>Ключевые факты месяца</h2>
+        </div>
+        <div class="period">Апрель 2026</div>
+      </header>
+      <div class="content">
+        <div class="takeaways">
+          <div class="takeaway"><div class="tag">Финансы</div><p>Доходы 123.8 млн руб.; расходы 100.5 млн руб.; EBITDA 23.3 млн руб.</p></div>
+          <div class="takeaway"><div class="tag">Рост доходов</div><p>Спецпроекты +3.5 млн, онлайн-платформа +2.5 млн, издательство +0.8 млн к марту.</p></div>
+          <div class="takeaway"><div class="tag">KPI</div><p>Факт выше плана по подпискам, NPS и лекциям в производстве; ниже плана по билетам, B2B и релизам.</p></div>
+          <div class="takeaway"><div class="tag">Проекты</div><p>Платформа 2.0 — 106.7%; B2B со Сбером — 68.9%, высокий риск.</p></div>
+        </div>
+      </div>
+      <div class="footer"><span>Навигация: стрелки, пробел, точки справа</span><span class="counter">7 / 7</span></div>
+    </section>
+  </main>
+  <nav class="nav" aria-label="Навигация по слайдам"></nav>
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const nav = document.querySelector(".nav");
+    let current = 0;
+
+    slides.forEach((_, index) => {
+      const dot = document.createElement("button");
+      dot.className = "dot" + (index === 0 ? " active" : "");
+      dot.setAttribute("aria-label", `Слайд ${index + 1}`);
+      dot.addEventListener("click", () => show(index));
+      nav.appendChild(dot);
+    });
+
+    const dots = Array.from(document.querySelectorAll(".dot"));
+
+    function show(index) {
+      current = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, i) => slide.classList.toggle("active", i === current));
+      dots.forEach((dot, i) => dot.classList.toggle("active", i === current));
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (["ArrowRight", "PageDown", " "].includes(event.key)) show(current + 1);
+      if (["ArrowLeft", "PageUp"].includes(event.key)) show(current - 1);
+      if (event.key === "Home") show(0);
+      if (event.key === "End") show(slides.length - 1);
+    });
+  </script>
+</body>
+</html>
