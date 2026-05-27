@@ -6,6 +6,7 @@ import re
 from pathlib import Path
 
 import pandas as pd
+from pypdf import PdfReader
 from openpyxl import Workbook
 from openpyxl.formatting.rule import CellIsRule
 from openpyxl.styles import Alignment, Font, PatternFill, Side, Border
@@ -16,6 +17,8 @@ WORKBOOK = Path("monthly_workbook.xlsx")
 EXPENSES_GLOB = "expenses_fact_1c_2026-*.xlsx"
 OUTPUT_XLSX = Path("plan-vs-fact.xlsx")
 OUTPUT_MD = Path("plan-vs-fact-summary.md")
+ACTS_DIR = Path("acts-incoming")
+ACTS_CSV = Path("acts-categorized.csv")
 
 PROJECTS = {
     "PRJ-2026-001": "Весенние чтения",
@@ -23,6 +26,22 @@ PROJECTS = {
     "PRJ-2026-003": "Цифровая платформа 2.0",
     "PRJ-2026-004": "B2B со Сбером",
     "PRJ-2026-005": "Аудиокниги — летний релиз",
+}
+
+PROJECT_NAME_TO_ID = {name.lower(): project_id for project_id, name in PROJECTS.items()}
+MONTHS_RU = {
+    "января": "01",
+    "февраля": "02",
+    "марта": "03",
+    "апреля": "04",
+    "мая": "05",
+    "июня": "06",
+    "июля": "07",
+    "августа": "08",
+    "сентября": "09",
+    "октября": "10",
+    "ноября": "11",
+    "декабря": "12",
 }
 
 
@@ -50,6 +69,127 @@ def article_from_1c(value: str) -> str:
     return text.split("—", 1)[1].strip() if "—" in text else text.strip()
 
 
+def extract_pdf_text(path: Path) -> str:
+    reader = PdfReader(str(path))
+    return "\n".join(page.extract_text() or "" for page in reader.pages)
+
+
+def parse_act_date(text: str) -> str:
+    match = re.search(r"«?(\d{1,2})»?\s+([а-яё]+)\s+(\d{4})\s+г", text, re.IGNORECASE)
+    if not match:
+        return ""
+    day, month_name, year = match.groups()
+    month = MONTHS_RU.get(month_name.lower(), "")
+    return f"{year}-{month}-{int(day):02d}" if month else ""
+
+
+def parse_act_number(text: str) -> str:
+    match = re.search(r"АКТ\s+№\s*([^\n]+)", text, re.IGNORECASE)
+    return match.group(1).strip() if match else ""
+
+
+def parse_contractor(text: str) -> str:
+    for line in text.splitlines():
+        line = line.strip()
+        if (line.startswith("ООО ") or line.startswith("ИП ")) and "Исполнитель" not in line:
+            return re.split(r"\s+\(", line, maxsplit=1)[0].strip()
+    return ""
+
+
+def parse_amount(text: str) -> float:
+    match = re.search(r"Всего к оплате:\s*([\d\s]+)\s*руб", text, re.IGNORECASE)
+    if not match:
+        match = re.search(r"Всего оказано услуг на сумму:\s*([\d\s]+)\s*руб", text, re.IGNORECASE)
+    if not match:
+        return 0.0
+    return float(match.group(1).replace(" ", ""))
+
+
+def parse_project_id(text: str) -> str:
+    match = re.search(r"Проект Заказчика:\s*(.+)", text)
+    if not match:
+        return ""
+    project_name = match.group(1).strip().lower()
+    return PROJECT_NAME_TO_ID.get(project_name, "")
+
+
+def categorize_article(text: str, contractor: str) -> str:
+    haystack = f"{text}\n{contractor}".lower()
+    if any(word in haystack for word in ["cloud", "инфраструктур", "compute", "storage"]):
+        return "IT-инфраструктура"
+    if any(word in haystack for word in ["sso", "интеграц", "дизайн", "ux", "ui"]):
+        return "Расчёты с подрядчиками"
+    if any(word in haystack for word in ["маркетинг", "реклам", "smm", "контекст"]):
+        return "Маркетинг"
+    if any(word in haystack for word in ["аренда", "площад", "техническое сопровождение"]):
+        return "Расчёты с подрядчиками"
+    if any(word in haystack for word in ["ролик", "видео", "контент"]):
+        return "Производство контента"
+    return "Прочие расходы"
+
+
+def build_act_proposals() -> pd.DataFrame:
+    rows = []
+    for path in sorted(ACTS_DIR.glob("*.pdf")):
+        text = extract_pdf_text(path)
+        contractor = parse_contractor(text)
+        rows.append(
+            {
+                "дата": parse_act_date(text),
+                "№ акта": parse_act_number(text),
+                "контрагент": contractor,
+                "сумма": int(parse_amount(text)),
+                "project_id": parse_project_id(text),
+                "статья": categorize_article(text, contractor),
+                "подтверждено": "",
+            }
+        )
+    return pd.DataFrame(rows, columns=["дата", "№ акта", "контрагент", "сумма", "project_id", "статья", "подтверждено"])
+
+
+def load_confirmed_acts() -> pd.DataFrame:
+    if not ACTS_DIR.exists():
+        return pd.DataFrame(columns=["Дата", "Project ID", "Месяц", "Статья", "Факт расходов, тыс ₽"])
+
+    if not ACTS_CSV.exists():
+        proposals = build_act_proposals()
+        proposals.to_csv(ACTS_CSV, index=False, encoding="utf-8-sig")
+        print(f"Created {ACTS_CSV} with proposed act categorization.")
+        print(proposals.to_string(index=False))
+        raise SystemExit(
+            "Stop before writing workbook: confirm acts in acts-categorized.csv "
+            "(use yes/да/true/1 to include, no/нет/false/0 to reject), then rerun."
+        )
+
+    acts = pd.read_csv(ACTS_CSV, dtype=str, encoding="utf-8-sig").fillna("")
+    required = ["дата", "№ акта", "контрагент", "сумма", "project_id", "статья", "подтверждено"]
+    missing = [col for col in required if col not in acts.columns]
+    if missing:
+        raise ValueError(f"{ACTS_CSV} missing columns: {', '.join(missing)}")
+
+    status = acts["подтверждено"].str.strip().str.lower()
+    known = {"yes", "y", "true", "1", "да", "д", "no", "n", "false", "0", "нет", "н"}
+    unconfirmed = acts[~status.isin(known)]
+    if not unconfirmed.empty:
+        print("Unconfirmed acts:")
+        print(unconfirmed.to_string(index=False))
+        raise SystemExit(
+            "Stop before writing workbook: every act must be confirmed or rejected "
+            "in acts-categorized.csv."
+        )
+
+    confirmed = acts[status.isin({"yes", "y", "true", "1", "да", "д"})].copy()
+    if confirmed.empty:
+        return pd.DataFrame(columns=["Дата", "Project ID", "Месяц", "Статья", "Факт расходов, тыс ₽"])
+
+    confirmed["Дата"] = pd.to_datetime(confirmed["дата"], errors="coerce")
+    confirmed["Месяц"] = confirmed["Дата"].dt.strftime("%Y-%m")
+    confirmed["Project ID"] = confirmed["project_id"]
+    confirmed["Статья"] = confirmed["статья"]
+    confirmed["Факт расходов, тыс ₽"] = confirmed["сумма"].astype(float) / 1000
+    return confirmed[["Дата", "Project ID", "Месяц", "Статья", "Факт расходов, тыс ₽"]]
+
+
 def read_sources() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     plan_income = pd.read_excel(WORKBOOK, sheet_name="План - доходы")
     plan_expenses = pd.read_excel(WORKBOOK, sheet_name="План - расходы")
@@ -68,6 +208,10 @@ def read_sources() -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
         df["Статья"] = df["Статья (1С)"].map(article_from_1c)
         df["Факт расходов, тыс ₽"] = df["Сумма, ₽"] / 1000
         actual_expense_frames.append(df)
+
+    confirmed_acts = load_confirmed_acts()
+    if not confirmed_acts.empty:
+        actual_expense_frames.append(confirmed_acts)
 
     actual_expenses = pd.concat(actual_expense_frames, ignore_index=True)
 
@@ -303,17 +447,21 @@ def build_summary_md(income_detail: pd.DataFrame, expense_detail: pd.DataFrame) 
 
 
 def main() -> None:
-    global WORKBOOK, EXPENSES_GLOB, OUTPUT_XLSX, OUTPUT_MD
+    global WORKBOOK, EXPENSES_GLOB, OUTPUT_XLSX, OUTPUT_MD, ACTS_DIR, ACTS_CSV
 
     parser = argparse.ArgumentParser(description="Build EBITDA plan-vs-fact workbook and markdown summary")
     parser.add_argument("--input", default=str(WORKBOOK), help="Path to monthly_workbook.xlsx")
     parser.add_argument("--expenses-glob", default=EXPENSES_GLOB, help="Glob for 1C expense files")
+    parser.add_argument("--acts-dir", default=str(ACTS_DIR), help="Directory with incoming PDF acts")
+    parser.add_argument("--acts-csv", default=str(ACTS_CSV), help="CSV with act categorization and confirmation")
     parser.add_argument("--output", default=str(OUTPUT_XLSX), help="Output workbook path")
     parser.add_argument("--summary", default=str(OUTPUT_MD), help="Output markdown summary path")
     args = parser.parse_args()
 
     WORKBOOK = Path(args.input)
     EXPENSES_GLOB = args.expenses_glob
+    ACTS_DIR = Path(args.acts_dir)
+    ACTS_CSV = Path(args.acts_csv)
     OUTPUT_XLSX = Path(args.output)
     OUTPUT_MD = Path(args.summary)
 
