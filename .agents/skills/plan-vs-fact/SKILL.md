@@ -1,6 +1,6 @@
 ---
 name: plan-vs-fact
-description: Build an EBITDA plan-vs-fact workbook and markdown summary from monthly_workbook.xlsx plus any expenses_fact_1c_*.xlsx files. Use when Codex needs to aggregate flagship project revenue and expense plans, actual revenue, and 1C actual expenses by Project ID, then produce plan-vs-fact.xlsx with Excel formulas and conditional formatting plus plan-vs-fact-summary.md.
+description: Build an EBITDA plan-vs-fact workbook and markdown summary from monthly_workbook.xlsx, any expenses_fact_1c_*.xlsx files, and optional PDF acts from acts-incoming/. Use when Codex needs to aggregate flagship project revenue and expense plans, actual revenue, 1C actual expenses, categorize incoming PDF acts by Project ID/article through a human-in-the-loop confirmation CSV, then produce plan-vs-fact.xlsx with Excel formulas and conditional formatting plus plan-vs-fact-summary.md.
 ---
 
 # Plan vs Fact
