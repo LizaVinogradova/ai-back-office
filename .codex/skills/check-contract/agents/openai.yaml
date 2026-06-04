@@ -1,0 +1,3 @@
+display_name: Check Contract
+short_description: Проверяет договор по правовой базе.
+default_prompt: Проверь contract-B.md по regulations/ и сохрани compliance-report.md.
