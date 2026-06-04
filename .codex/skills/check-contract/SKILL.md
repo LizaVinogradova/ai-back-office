@@ -20,7 +20,25 @@ The standard output is:
 
 ## Workflow
 
-1. Run the bundled script from the project root, using the path where this skill is installed:
+1. Generator: read the contract and all five `regulations/` files. Produce a draft report with direct quotes and links to legal-base points.
+
+2. Validator-subagent: launch a strict quote validator with this instruction:
+
+```text
+Ты — строгий валидатор цитат. На вход — отчёт первого агента, договор и правовая база. Для каждой цитаты найди её буквально в указанном источнике (точное совпадение текста). Верни «ОК» если найдена буквально, «такой цитаты нет» если есть любое расхождение — перефразировка, склейка, недосказанность. Не интерпретируй смысл. Только буквальное совпадение.
+```
+
+3. Claim: if any quote is marked `такой цитаты нет`, return a claim to the generator:
+
+```text
+Эти цитаты не найдены в источнике буквально: [список]. Переделай отчёт: убери, замени или уточни эти замечания.
+```
+
+4. Loop: repeat generator, validator, and claim up to 3 iterations. If the report still has quote mismatches after 3 iterations, keep the final report with the status `не сошлось, требует ручной проверки`.
+
+## Scripted Run
+
+Run the bundled script from the project root, using the path where this skill is installed. The script implements the generator plus an internal exact-substring validator loop so the output is reproducible:
 
 ```powershell
 python .agents\skills\check-contract\scripts\check_contract.py contract-B.md
@@ -32,16 +50,17 @@ If using the `.codex` copy:
 python .codex\skills\check-contract\scripts\check_contract.py contract-B.md
 ```
 
-2. If the user provides another contract path, pass that path instead:
+If the user provides another contract path, pass that path instead:
 
 ```powershell
 python .agents\skills\check-contract\scripts\check_contract.py path\to\contract.md
 ```
 
-3. Verify the output:
+Verify the output:
    - exactly one block per violation;
    - each block includes a direct quote from the contract with the contract point;
    - each block links to a concrete legal-base file and point with a direct quote;
+   - `Статус валидации цитат` is `ОК`, or the report is explicitly marked as requiring manual review after 3 iterations;
    - include only violations against the legal base, not general legal drafting suggestions.
 
 ## Expected Checks
