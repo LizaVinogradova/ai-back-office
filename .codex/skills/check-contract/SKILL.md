@@ -38,6 +38,38 @@ Record the validator result in the run notes: which quotes are `ОК`, which are
 
 4. Loop: repeat generator, validator, and claim up to 3 iterations. If the report still has quote mismatches after 3 iterations, keep the final report with the status `не сошлось, требует ручной проверки`. If all quotes pass, mark the report `ОК` and record the iteration count.
 
+## Three-Layer Validation
+
+Use this architecture for legal-base checks because every finding depends on evidence quotes:
+
+1. Main agent / Generator:
+   - reads the contract and legal base;
+   - identifies only violations against the legal base;
+   - writes the draft report with direct source quotes;
+   - never invents, shortens, merges, or paraphrases quoted text.
+
+2. Validator-subagent:
+   - receives the draft report, the contract, and all legal-base files;
+   - checks each quote as an exact substring in the stated source;
+   - returns only `ОК` or `такой цитаты нет` per quote;
+   - does not judge legal meaning, severity, or whether the finding is correct.
+
+3. Claim loop:
+   - if every quote is `ОК`, finalize the report and record the iteration count;
+   - if any quote is `такой цитаты нет`, send the generator this claim:
+
+```text
+Эти цитаты не найдены в источнике буквально: [список]. Переделай отчёт: убери, замени или уточни эти замечания.
+```
+
+The generator must then rewrite the report by removing the bad quote, replacing it with an exact source substring, or narrowing the finding.
+
+Circuit breaker:
+
+- Run at most 3 generator-validator iterations.
+- If quotes still fail after iteration 3, keep the final report but mark it exactly: `не сошлось, требует ручной проверки`.
+- Batch summaries must include the number of loop iterations for each contract and the final state: `чистый` when all quotes pass, or `не сошлось` when the circuit breaker fires.
+
 ## Scripted Run
 
 Run the bundled script from the project root, using the path where this skill is installed. The script implements the generator plus an internal exact-substring validator loop so batch output is reproducible. For a training/demo run, still launch the external Validator-subagent once and compare its response with the internal status:
